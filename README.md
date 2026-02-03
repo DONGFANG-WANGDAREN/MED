@@ -2,35 +2,39 @@
 
 My File Browser ➡️ Meus Explorator Documentorum ➡️ MED
 
-MED 是一个使用 Rust 编写的轻量级、跨平台文件浏览器。
+[中文文档](读我.md)
 
-## 功能特点
+## English Introduction
 
-- **跨平台**：支持 macOS, Windows, Linux。
-- **纯 Rust 实现**：基于 Iced GUI 框架，性能优异。
-- **暗黑模式**：默认采用现代化的深色主题。
-- **基础操作**：
-  - 浏览文件和目录。
-  - 显示文件大小和最后修改时间。
-  - 调用系统默认程序打开文件。
-  - 顶部导航与刷新功能。
+MED is a lightweight, cross-platform file browser written in Rust.
 
-## 安装与运行
+### Features
 
-确保你已经安装了 [Rust 环境](https://www.rust-lang.org/tools/install)。
+- **Cross-Platform**: Supports macOS, Windows, and Linux.
+- **Pure Rust**: Built with the Iced GUI framework for high performance.
+- **Dark Mode**: Modern dark theme enabled by default.
+- **Basic Operations**:
+  - Browse files and directories.
+  - Display file size and last modified time.
+  - Open files using the system default application.
+  - Top navigation bar and refresh functionality.
+
+### Installation & Run
+
+Ensure you have [Rust installed](https://www.rust-lang.org/tools/install).
 
 ```bash
-# 克隆项目（如果你还没有）
+# Clone the repository (if you haven't already)
 git clone https://github.com/DONGFANG-WANGDAREN/MED.git
 cd MED
 
-# 运行
+# Run
 cargo run
 
-# 构建发布版本
+# Build release version
 cargo build --release
 ```
 
-## 作者
+### Author
 
 **DONGFANG WANGDAREN | 东方 旺大人**
