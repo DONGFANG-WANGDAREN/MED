@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "MED"
-version = "2026.203.2357+1"
+version = "2026.204.2213+K1.NANJING.D1"
 dependencies = [
  "chrono",
  "dirs",
