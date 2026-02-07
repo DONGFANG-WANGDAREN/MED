@@ -1,6 +1,5 @@
-use iced::widget::{button, column, container, row, scrollable, text, Column};
+use iced::widget::{button, column, container, image, row, scrollable, text, Column};
 use iced::{Element, Length, Task, Theme};
-use iced::window;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -8,14 +7,17 @@ use std::time::SystemTime;
 pub fn main() -> iced::Result {
     iced::application(FileExplorer::default, FileExplorer::update, FileExplorer::view)
         .title("MED")
-        .theme(|_state: &FileExplorer| Theme::Dark)
+        .theme(|state: &FileExplorer| state.theme.clone())
+        .antialiasing(true)
         .run()
 }
 
 struct FileExplorer {
     current_path: PathBuf,
     entries: Vec<FileEntry>,
+    selected_entry: Option<FileEntry>,
     error_message: Option<String>,
+    theme: Theme,
 }
 
 #[derive(Debug, Clone)]
@@ -30,9 +32,11 @@ struct FileEntry {
 #[derive(Debug, Clone)]
 enum Message {
     NavigateTo(PathBuf),
+    SelectFile(FileEntry),
     GoUp,
     OpenFile(PathBuf),
     Refresh,
+    ToggleTheme,
 }
 
 impl Default for FileExplorer {
@@ -43,7 +47,9 @@ impl Default for FileExplorer {
         Self {
             current_path,
             entries,
+            selected_entry: None,
             error_message,
+            theme: Theme::Dark,
         }
     }
 }
@@ -56,8 +62,12 @@ impl FileExplorer {
                     let (entries, error) = read_directory(&path);
                     self.current_path = path;
                     self.entries = entries;
+                    self.selected_entry = None;
                     self.error_message = error;
                 }
+            }
+            Message::SelectFile(entry) => {
+                self.selected_entry = Some(entry);
             }
             Message::GoUp => {
                 if let Some(parent) = self.current_path.parent() {
@@ -65,6 +75,7 @@ impl FileExplorer {
                     let (entries, error) = read_directory(&path);
                     self.current_path = path;
                     self.entries = entries;
+                    self.selected_entry = None;
                     self.error_message = error;
                 }
             }
@@ -76,7 +87,15 @@ impl FileExplorer {
             Message::Refresh => {
                 let (entries, error) = read_directory(&self.current_path);
                 self.entries = entries;
+                self.selected_entry = None;
                 self.error_message = error;
+            }
+            Message::ToggleTheme => {
+                self.theme = match self.theme {
+                    Theme::Dark => Theme::Light,
+                    Theme::Light => Theme::Dark,
+                    _ => Theme::Dark,
+                };
             }
         }
         Task::none()
@@ -86,6 +105,8 @@ impl FileExplorer {
         let controls = row![
             button("⬆ Up").on_press(Message::GoUp),
             button("🔄 Refresh").on_press(Message::Refresh),
+            button(if self.theme == Theme::Dark { "Dark Mode" } else { "Light Mode" })
+                .on_press(Message::ToggleTheme),
         ]
         .spacing(10);
 
@@ -134,7 +155,7 @@ impl FileExplorer {
                     .on_press(if entry.is_dir {
                         Message::NavigateTo(entry.path.clone())
                     } else {
-                        Message::OpenFile(entry.path.clone())
+                        Message::SelectFile(entry.clone())
                     });
 
                 col.push(btn)
@@ -145,6 +166,25 @@ impl FileExplorer {
                 .height(Length::Fill)
                 .into()
         };
+
+        let preview_pane: Element<Message> = if let Some(entry) = &self.selected_entry {
+            preview_content(entry)
+        } else {
+            container(text("Select a file to preview").size(16).color(iced::Color::from_rgb(0.5, 0.5, 0.5)))
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .center_x(Length::Fill)
+                .center_y(Length::Fill)
+                .into()
+        };
+
+        let main_content = row![
+            container(content).width(Length::FillPortion(1)),
+            container(preview_pane).width(Length::FillPortion(1)).padding(10)
+        ]
+        .spacing(10)
+        .width(Length::Fill)
+        .height(Length::Fill);
 
         let footer = container(
             text("Created by DONGFANG WANGDAREN | 东方 旺大人")
@@ -159,10 +199,75 @@ impl FileExplorer {
             controls_bar,
             path_bar,
             error_banner,
-            content,
+            main_content,
             footer
         ]
         .into()
+    }
+}
+
+fn preview_content(entry: &FileEntry) -> Element<Message> {
+    let file_name = text(&entry.name).size(20);
+    let file_info = column![
+        file_name,
+        text(format!("Size: {}", entry.size)).size(14).color(iced::Color::from_rgb(0.6, 0.6, 0.6)),
+        text(format!("Modified: {}", entry.modified)).size(14).color(iced::Color::from_rgb(0.6, 0.6, 0.6)),
+        button("Open Externally").on_press(Message::OpenFile(entry.path.clone()))
+    ]
+    .spacing(10);
+
+    let content: Element<Message> = if is_image_file(&entry.path) {
+        image(&entry.path)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .content_fit(iced::ContentFit::Contain)
+            .into()
+    } else if is_text_file(&entry.path) {
+        match fs::read_to_string(&entry.path) {
+            Ok(content) => {
+                let preview_text = if content.len() > 10000 {
+                     format!("{}... (truncated)", &content[..10000])
+                } else {
+                    content
+                };
+                scrollable(text(preview_text).size(14).font(iced::font::Font::MONOSPACE))
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into()
+            }
+            Err(_) => text("Could not read text file.").into(),
+        }
+    } else {
+        text("Preview not available for this file type.").into()
+    };
+
+    column![
+        file_info,
+        container(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .style(container::bordered_box)
+    ]
+    .spacing(20)
+    .padding(20)
+    .into()
+}
+
+fn is_image_file(path: &Path) -> bool {
+    if let Some(extension) = path.extension() {
+        let ext = extension.to_string_lossy().to_lowercase();
+        matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "bmp" | "webp" | "svg")
+    } else {
+        false
+    }
+}
+
+fn is_text_file(path: &Path) -> bool {
+    if let Some(extension) = path.extension() {
+        let ext = extension.to_string_lossy().to_lowercase();
+        matches!(ext.as_str(), "txt" | "md" | "rs" | "toml" | "json" | "js" | "ts" | "html" | "css" | "py" | "c" | "cpp" | "h")
+    } else {
+        false
     }
 }
 

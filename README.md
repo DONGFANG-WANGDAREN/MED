@@ -12,7 +12,11 @@ MED is a lightweight, cross-platform file browser written in Rust.
 
 - **Cross-Platform**: Supports macOS, Windows, and Linux.
 - **Pure Rust**: Built with the Iced GUI framework for high performance.
-- **Dark Mode**: Modern dark theme enabled by default.
+- **Dark Mode**: Modern dark theme enabled by default, with a toggle button to switch between Light and Dark modes.
+- **File Preview**:
+  - Split-pane layout with real-time preview.
+  - Supports image formats (png, jpg, etc.).
+  - Text file preview (Note: currently has stability issues with some text files).
 - **Basic Operations**:
   - Browse files and directories.
   - Display file size and last modified time.
